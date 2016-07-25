@@ -23,7 +23,7 @@
       h1 {
         line-height: 30px;
         text-align: center;
-        margin-bottom: 40px;
+        margin-bottom: 50px;
       }
 
       table {
@@ -76,6 +76,13 @@
   </head>
   <body>
     <h1>Font Texture Generator Online</h1>
+    <p>
+      This is a simple utility for generating font textures.
+      See <a href="example-webgl/">this example</a> for one way of using the generated font texture.
+      This code is licensed under the <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a> license and lives at <a href="https://github.com/evanw/font-texture-generator">https://github.com/evanw/font-texture-generator</a>.
+      Distance fields are computed using jump flooding for speed with 2x supersampling for quality.
+      The generator is unicode-aware and even <a href="javascript:loadEmojiDemo()">supports emoji</a>.
+    </p>
     <table>
       <tr>
         <th>Font name: &nbsp;</th>
@@ -388,11 +395,28 @@
     return null;
   }
 
+  loadEmojiDemo = function() {
+    checkboxCharactersCustom.checked = true;
+    checkboxDisplayTypeNormal.checked = true;
+    textboxBackgroundColor.value = 'none';
+    textboxCustomCharacters.value = '😄😱👏👍👎🎉💤';
+    textboxFillColor.value = '#000';
+    textboxStrokeColor.value = 'none';
+    textboxStrokeThickness.value = 0;
+    checkBackgroundColor();
+    checkFillColor();
+    checkStrokeColor();
+    checkStrokeThickness();
+    updateCharacters();
+    updateDisplayType();
+    generate();
+  };
+
   whiteOnBlack = function() {
     textboxBackgroundColor.value = '#000';
     textboxFillColor.value = '#FFF';
     textboxStrokeColor.value = 'none';
-    textboxStrokeThickness.value = '0';
+    textboxStrokeThickness.value = 0;
     checkBackgroundColor();
     checkFillColor();
     checkStrokeColor();
@@ -436,7 +460,7 @@
   function checkDistanceFieldFalloff() {
     var match = /^(\d+)$/.exec(textboxDistanceFieldFalloff.value);
     distanceFieldFalloff = match ? match[1] | 0 : 0;
-    textboxDistanceFieldFalloff.className = 0 < distanceFieldFalloff && distanceFieldFalloff <= 64 ? '' : 'invalid';
+    textboxDistanceFieldFalloff.className = 0 < distanceFieldFalloff && distanceFieldFalloff <= 32 ? '' : 'invalid';
     updateGenerate();
   }
 
@@ -532,7 +556,7 @@
     var character = codePointToString(codePoint);
     var width = canvas.width = size * multiplier;
     var height = canvas.height = size * multiplier;
-    var bg = checkboxDisplayTypeDistanceField.checked ? {r: 0, g: 0, b: 0, a: 255} : backgroundColor;
+    var bg = checkboxDisplayTypeDistanceField.checked ? {r: 0, g: 0, b: 0, a: 0} : backgroundColor;
 
     context.font =
       (checkboxFontBold.checked ? 'bold ' : '') +
@@ -562,10 +586,6 @@
 
     else {
       context.fillStyle = '#000';
-      context.fillRect(0, 0, width, height);
-
-      // Fill
-      context.fillStyle = '#FFF';
       context.fillText(character, originX, originY);
     }
 
@@ -833,7 +853,7 @@
       for (var x = 0; x < newWidth; x++, i += 4) {
         if (falloff <= x && x < falloff + oldWidth &&
             falloff <= y && y < falloff + oldHeight &&
-            data[(x - falloff) + (y - falloff) * oldWidth << 2] > 127) {
+            data[((x - falloff) + (y - falloff) * oldWidth << 2) + 3] > 127) {
           ping[i] = x;
           ping[i + 1] = y;
           ping[i + 2] = NaN;
@@ -1004,6 +1024,7 @@
       width: packed.width,
       height: packed.height,
     };
+
     var characters = codePoints.map(function(codePoint, i) {
       var image = images[i];
       return {
@@ -1019,9 +1040,15 @@
     });
 
     if (checkboxDataFormatJSON.checked) {
+      var map = {};
+      characters.forEach(function(character) {
+        var text = character.text;
+        delete character.text;
+        map[text] = character;
+      });
       json.characters = null;
       textarea.value = JSON.stringify(json, null, 2).replace('null',
-        JSON.stringify(characters).replace(/^\[\{(.*)\}\]$/, '[\n    {$1}\n  ]').replace(/},{/g, '},\n    {'));
+        JSON.stringify(map).replace(/^\{(.*)\}$/, '{\n    $1\n  }').replace(/},"/g, '},\n    "'));
     }
 
     else if (checkboxDataFormatXML.checked) {
@@ -1088,7 +1115,7 @@
   }
 
   function xmlAttribute(name) {
-    return name.replace(/([a-z])([A-Z])/, function(x) {
+    return name.replace(/([a-z])([A-Z])/g, function(x) {
       return x[0] + '-' + x[1].toLowerCase();
     });
   }
@@ -1106,6 +1133,8 @@
   checkboxFontItalic.onchange = generate;
   checkboxResolutionPowerOf2.onchange = generate;
   checkboxResolutionSmallest.onchange = generate;
+  checkboxStrokeJoinMiter.onchange = generate;
+  checkboxStrokeJoinRound.onchange = generate;
 
   textboxBackgroundColor.oninput = checkBackgroundColor;
   textboxDistanceFieldFalloff.oninput = checkDistanceFieldFalloff;
