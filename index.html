@@ -1072,7 +1072,7 @@
       var name = json.name.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/, '_').replace(/(?:^_|_$)/, '');
       textarea.value = [].concat([
         'typedef struct Character {',
-        '  int codePoint, x, y, width, height, originX, originY;',
+        '  int codePoint, x, y, width, height, originX, originY, advance;',
         '} Character;',
         '',
         'typedef struct Font {',
@@ -1092,6 +1092,7 @@
             ', ' + character.x + ', ' + character.y +
             ', ' + character.width + ', ' + character.height +
             ', ' + character.originX + ', ' + character.originY +
+            ', ' + character.advance +
           '},';
         }),
         ['};',
